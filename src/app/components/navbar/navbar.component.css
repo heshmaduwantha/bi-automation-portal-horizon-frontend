@@ -1,0 +1,74 @@
+.navbar {
+  height: 60px;
+  background-color: #0c3b5d; /* Horizon Navy Blue */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo-group {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.horizon-text {
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.sub-text {
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  height: 30px;
+  background-color: rgba(255, 255, 255, 0.3);
+  margin: 0 20px;
+}
+
+.portal-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #60a5fa;
+}
+
+.nav-right {
+  display: flex;
+  gap: 30px;
+}
+
+.nav-item {
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  padding: 5px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-item:hover {
+  color: #fff;
+}
+
+.nav-item.active {
+  color: #fff;
+  font-weight: 700;
+  border-bottom-color: #60a5fa; /* Active underline */
+}

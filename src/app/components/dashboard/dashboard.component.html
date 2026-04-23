@@ -1,0 +1,148 @@
+<div class="dashboard-container">
+  <!-- Mission Control Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <h1>Automation Mission Control</h1>
+      <p>Live status monitoring of Power BI export schedules</p>
+    </div>
+    <button pButton label="New Automation" icon="pi pi-plus" class="p-button-primary p-button-sm btn-new-automation" routerLink="/setup"></button>
+  </header>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="toolbar-section">
+    <div class="search-box">
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+        <input type="text" pInputText placeholder="Search automation..." [(ngModel)]="searchTerm" (input)="onSearchChange()" />
+      </p-iconField>
+    </div>
+    <div class="toolbar-actions">
+      <button pButton icon="pi pi-filter" label="Filters" class="p-button-outlined p-button-secondary p-button-sm"></button>
+      <div class="view-toggle">
+        <button pButton icon="pi pi-th-large" class="p-button-text p-button-sm" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'"></button>
+        <button pButton icon="pi pi-list" class="p-button-text p-button-sm" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="content-viewport">
+    <div *ngIf="loading && tasks.length === 0" class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #3b82f6"></i>
+      <p>Synchronizing schedules...</p>
+    </div>
+
+    <!-- Responsive Card Grid -->
+    <div class="task-grid" *ngIf="viewMode === 'grid' && pagedTasks.length > 0">
+      <div class="task-card" *ngFor="let task of pagedTasks">
+        <div class="card-header">
+          <div class="title-section">
+            <div class="report-icon icon-green">
+              <i class="pi pi-database"></i>
+            </div>
+            <div class="report-info">
+              <h3>{{task.reportName}}</h3>
+            </div>
+          </div>
+          <p-tag [value]="task.status || 'Idle'" [severity]="getSeverity(task.status)" [rounded]="true" icon="pi pi-clock"></p-tag>
+        </div>
+
+        <div class="card-metrics">
+          <div class="metric-row">
+            <span class="m-label">Last Run</span>
+            <span class="m-value">{{task.lastRunTime ? (task.lastRunTime | date:'MMM d, h:mm a') : 'Never'}}</span>
+          </div>
+          <div class="metric-row">
+            <span class="m-label">Rows Ingested</span>
+            <span class="m-value">{{task.lastRunRecordCount | number}} rows</span>
+          </div>
+          <div class="metric-row schedule-row">
+            <div class="schedule-details">
+              <span class="m-label">Schedule</span>
+              <div class="schedule-value">
+                <span class="freq">{{task.cronExpression}}</span>
+                <span class="time">({{(task.cronExpression | cronHumanize).replace('|', ' at ')}})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-error" *ngIf="task.lastErrorMessage">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{task.lastErrorMessage}}</span>
+        </div>
+
+        <div class="card-actions">
+          <button pButton label="Run Now" icon="pi pi-play" class="p-button-outlined p-button-sm action-btn" (click)="onManualRun(task.id)"></button>
+          <button pButton label="Delete" icon="pi pi-trash" class="p-button-outlined p-button-danger p-button-sm action-btn" (click)="onDelete(task.id)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- List View Table -->
+    <div class="task-list" *ngIf="viewMode === 'list' && pagedTasks.length > 0">
+      <div class="list-header">
+        <span class="col-report">Report Name</span>
+        <span class="col-status">Status</span>
+        <span class="col-run">Last Run</span>
+        <span class="col-rows">Rows</span>
+        <span class="col-actions">Actions</span>
+      </div>
+      <div class="list-row" *ngFor="let task of pagedTasks">
+        <div class="col-report">
+          <div class="mini-icon icon-green">
+            <i class="pi pi-database"></i>
+          </div>
+          <span>{{task.reportName}}</span>
+        </div>
+        <div class="col-status">
+          <p-tag [value]="task.status || 'Idle'" [severity]="getSeverity(task.status)" [rounded]="true"></p-tag>
+        </div>
+        <div class="col-run">{{task.lastRunTime ? (task.lastRunTime | date:'short') : 'Never'}}</div>
+        <div class="col-rows">{{task.lastRunRecordCount | number}}</div>
+        <div class="col-actions">
+          <button pButton icon="pi pi-play" class="p-button-text p-button-sm" (click)="onManualRun(task.id)"></button>
+          <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="onDelete(task.id)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && pagedTasks.length === 0" class="empty-state">
+      <div class="empty-icon-box">
+        <i class="pi pi-search" style="font-size: 3.5rem; color: #cbd5e1" *ngIf="searchTerm"></i>
+        <i class="pi pi-calendar-plus" style="font-size: 3.5rem; color: #cbd5e1" *ngIf="!searchTerm"></i>
+      </div>
+      <h2>{{searchTerm ? 'No matching results' : 'No active automations'}}</h2>
+      <p>{{searchTerm ? 'Try adjusting your search term' : 'Start by creating your first Power BI report schedule.'}}</p>
+      <button pButton label="Clear Search" class="p-button-secondary mt-4" *ngIf="searchTerm" (click)="searchTerm = ''; onSearchChange()"></button>
+    </div>
+  </div>
+
+  <!-- Pagination Footer -->
+  <footer class="pagination-footer" *ngIf="filteredTasks.length > 0">
+    <div class="pagination-info" [innerHTML]="paginationText"></div>
+    
+    <div class="pagination-controls">
+      <button pButton icon="pi pi-angle-double-left" class="p-button-text p-button-sm" 
+              [disabled]="currentPage === 1" (click)="onPageChange(1)"></button>
+      <button pButton icon="pi pi-angle-left" class="p-button-text p-button-sm" 
+              [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)"></button>
+      
+      <span class="page-num active">{{currentPage}}</span>
+      
+      <button pButton icon="pi pi-angle-right" class="p-button-text p-button-sm" 
+              [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)"></button>
+      <button pButton icon="pi pi-angle-double-right" class="p-button-text p-button-sm" 
+              [disabled]="currentPage === totalPages" (click)="onPageChange(totalPages)"></button>
+    </div>
+
+    <div class="pagination-rows">
+      <span>Rows per page</span>
+      <select class="page-size-select" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+        <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{opt}}</option>
+      </select>
+    </div>
+  </footer>
+
+</div>

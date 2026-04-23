@@ -1,0 +1,75 @@
+<div class="reports-container">
+  <!-- Power BI Hero Section -->
+  <header class="reports-header">
+    <div class="header-content">
+      <h1>Power BI Automation</h1>
+      <p>Manage reports, workspaces, and dataset refreshes</p>
+    </div>
+  </header>
+
+  <!-- Content Viewport -->
+  <div class="content-viewport">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #3b82f6"></i>
+      <p>Connecting to Power BI Service...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+      <div class="error-icon">
+        <i class="pi pi-exclamation-triangle"></i>
+      </div>
+      <h2>Sync Failed</h2>
+      <p>{{error}}</p>
+      <button pButton label="Retry Connection" icon="pi pi-refresh" (click)="loadReports()"></button>
+    </div>
+
+    <!-- Reports Grid -->
+    <div class="reports-grid" *ngIf="!loading && reports.length > 0">
+      <div class="report-card" *ngFor="let report of reports; let i = index">
+        <div class="card-header">
+          <div class="report-meta">
+            <p-tag [value]="(report.reportType || 'PowerBIReport').toUpperCase()" 
+                   severity="info" 
+                   [rounded]="true" 
+                   class="type-tag"></p-tag>
+          </div>
+          <div class="title-section">
+            <div class="report-icon icon-green">
+              <i class="pi pi-database"></i>
+            </div>
+            <h3>{{report.name}}</h3>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <p class="description">Power BI Resource: {{report.reportType || 'Standard Report'}}</p>
+        </div>
+
+        <div class="card-actions">
+          <button pButton 
+                  label="View Online" 
+                  icon="pi pi-external-link" 
+                  class="p-button-outlined p-button-secondary p-button-sm action-btn" 
+                  (click)="openReport(report.webUrl)"></button>
+          
+          <button pButton 
+                  label="Run Now" 
+                  icon="pi pi-play" 
+                  class="p-button-outlined p-button-primary p-button-sm action-btn" 
+                  (click)="onRefresh(report.datasetId)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && reports.length === 0 && !error" class="empty-state">
+      <div class="empty-icon-box">
+        <i class="pi pi-folder-open" style="font-size: 3.5rem; color: #cbd5e1"></i>
+      </div>
+      <h2>No reports found</h2>
+      <p>We couldn't find any Power BI reports in your workspace.</p>
+    </div>
+  </div>
+</div>

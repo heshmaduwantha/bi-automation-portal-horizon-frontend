@@ -1,0 +1,22 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Lock to viewport height */
+  overflow: hidden; /* Prevent body scroll */
+}
+
+app-navbar {
+  flex-shrink: 0;
+}
+
+main {
+  flex: 1;
+  overflow-y: auto; /* Enable scroll only for middle part */
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+app-footer {
+  flex-shrink: 0;
+}

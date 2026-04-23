@@ -1,0 +1,87 @@
+<div class="setup-container">
+  <div class="header">
+    <h1>Automation Master Data Setup</h1>
+  </div>
+
+  <!-- Step 1: Selection -->
+  <div *ngIf="step === 1" class="step-card">
+    <div class="field-group">
+      <label>Search Power BI Report to Automate</label>
+      <div class="search-box">
+        <input type="text" 
+               class="form-control" 
+               placeholder="Type report name..." 
+               [(ngModel)]="searchTerm" 
+               (input)="onSearch(searchTerm)">
+        
+        <ul class="suggestions" *ngIf="suggestions.length > 0">
+          <li *ngFor="let s of suggestions" (click)="onSelectSuggestion(s)">
+            <span class="s-name">{{s.name}}</span>
+            <span class="s-id">{{s.id}}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <div *ngIf="selectedReport" class="selection-summary">
+      <div class="summary-item">
+        <span class="label">Dataset ID</span>
+        <span class="value">{{selectedReport.datasetId}}</span>
+      </div>
+      <button class="btn-next" [disabled]="loading" (click)="fetchSchema(selectedReport.datasetId)">
+        {{loading ? 'Analyzing...' : 'Continue to Config'}}
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 2: Configuration -->
+  <div *ngIf="step === 2" class="step-card">
+    <div class="info-banner" *ngIf="datasetInfo">
+      <i class="icon-clock"></i>
+      Power BI Last Refresh: <strong>{{datasetInfo.lastRefreshTime | date:'medium'}}</strong>
+      <p class="small">Use this to align your schedule with fresh data.</p>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-section">
+        <h3>Schedule Setting</h3>
+        <p class="small">Enter Cron Expression (Default is daily at midnight)</p>
+        <div class="cron-input">
+          <input type="text" [(ngModel)]="cronTime" class="form-control" placeholder="0 0 * * *">
+          <div class="cron-presets">
+            <button (click)="cronTime = '0 * * * *'">Hourly</button>
+            <button (click)="cronTime = '0 0 * * *'">Daily</button>
+            <button (click)="cronTime = '0 0 * * 0'">Weekly</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>Identify Primary Keys</h3>
+        <p class="small">Select the column(s) that uniquely identify each row for smart upserts.</p>
+        
+        <div class="schema-list">
+          <div *ngFor="let col of columns" 
+               class="schema-item" 
+               [class.selected]="selectedPKs.includes(col.sanitizedName)"
+               (click)="togglePK(col.sanitizedName)">
+            <div class="col-info">
+              <span class="col-name">{{col.name}}</span>
+              <span class="col-type">{{col.dataType}}</span>
+            </div>
+            <div class="pk-indicator">
+              {{selectedPKs.includes(col.sanitizedName) ? '🔑 Primary Key' : 'Mark as PK'}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-back" (click)="step = 1">Back</button>
+      <button class="btn-save" (click)="saveSchedule()" [disabled]="loading || selectedPKs.length === 0">
+        {{loading ? 'Saving...' : 'Finalize Automation'}}
+      </button>
+    </div>
+  </div>
+</div>
