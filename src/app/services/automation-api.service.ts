@@ -36,7 +36,8 @@ export class AutomationApiService {
     return this.http.delete(`${this.apiUrl}/tasks/${id}`);
   }
 
-  runTaskManually(id: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/tasks/${id}/run`, {});
+  runTaskManually(id: number, limit?: number): Observable<any> {
+    const url = limit ? `${this.apiUrl}/tasks/${id}/run?limit=${limit}` : `${this.apiUrl}/tasks/${id}/run`;
+    return this.http.post(url, {});
   }
 }

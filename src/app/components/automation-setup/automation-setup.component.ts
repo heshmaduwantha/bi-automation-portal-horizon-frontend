@@ -21,6 +21,12 @@ export class AutomationSetupComponent implements OnInit {
   selectedReport: PowerBIReport | null = null;
   
   // Step 2: Configuration
+  tables: string[] = [];
+  filteredTables: string[] = [];
+  tableSearchTerm = '';
+  selectedTable = '';
+  isCustomDax = false;
+  customDaxQuery = '';
   columns: PowerBISchemaColumn[] = [];
   datasetInfo: PowerBIDataset | null = null;
   selectedPKs: string[] = [];
@@ -77,27 +83,96 @@ export class AutomationSetupComponent implements OnInit {
       webUrl: '',
       embedUrl: ''
     };
-    this.fetchSchema(suggestion.datasetId);
+    this.fetchTables(suggestion.datasetId);
   }
 
-  onSelectReport(reportId: string): void {
-    const report = this.reports.find(r => r.id === reportId);
-    if (report) {
-      this.selectedReport = report;
-      this.fetchSchema(report.datasetId);
+  fetchTables(datasetId: string): void {
+    this.loading = true;
+    this.powerbiService.getDatasetTables(datasetId).subscribe({
+      next: (tables) => {
+        this.tables = tables;
+        this.filteredTables = tables;
+        this.loading = false;
+        this.step = 2; // Move to table selection step
+      },
+      error: (err) => {
+        // Fallback: If tables fetch fails, we still go to step 2 but with empty list
+        this.tables = [];
+        this.loading = false;
+        this.step = 2;
+        this.messageService.add({ severity: 'warn', summary: 'Limited Access', detail: 'Could not fetch tables automatically. Please enter table name manually.' });
+      }
+    });
+  }
+
+  onTableSearch(term: string): void {
+    if (!term) {
+      this.filteredTables = this.tables;
+      return;
+    }
+    const t = term.toLowerCase();
+    this.filteredTables = this.tables.filter(tab => tab.toLowerCase().includes(t));
+  }
+
+  onSelectTable(): void {
+    if (this.isCustomDax) {
+      if (!this.customDaxQuery || !this.selectedReport) return;
+      this.fetchCustomSchema(this.selectedReport.datasetId, this.customDaxQuery);
+    } else {
+      if (!this.selectedTable || !this.selectedReport) return;
+      this.fetchSchema(this.selectedReport.datasetId, this.selectedTable);
     }
   }
 
-  fetchSchema(datasetId: string): void {
+  fetchCustomSchema(datasetId: string, dax: string): void {
     this.loading = true;
-    // Fetch both schema and dataset info (for refresh time)
-    this.powerbiService.getDatasetSchema(datasetId).subscribe(cols => {
-      this.columns = cols;
-      this.powerbiService.getDatasetById(datasetId).subscribe(ds => {
-        this.datasetInfo = ds;
+    // We'll use the execute-query endpoint to get the schema of the custom DAX
+    this.powerbiService.executeQuery(datasetId, `EVALUATE TOPN(1, ${dax})`).subscribe({
+      next: (result) => {
+        if (result.results?.[0]?.tables?.[0]?.rows?.length > 0) {
+          const firstRow = result.results[0].tables[0].rows[0];
+          this.columns = Object.keys(firstRow).map(key => ({
+            name: key,
+            dataType: 'String',
+            sanitizedName: key.toLowerCase().replace(/[^a-z0-9]/g, '_')
+          }));
+          this.step = 3;
+        } else {
+          alert('No data returned from DAX query. Please check the query.');
+        }
         this.loading = false;
-        this.step = 2;
-      });
+      },
+      error: (err) => {
+        console.error('DAX Schema error:', err);
+        alert('Failed to validate DAX query. ' + (err.error?.message || err.message));
+        this.loading = false;
+      }
+    });
+  }
+
+  fetchSchema(datasetId: string, tableName: string): void {
+    this.loading = true;
+    this.powerbiService.getDatasetSchema(datasetId, tableName).subscribe({
+      next: (cols) => {
+        this.columns = cols;
+        // Fetch dataset info but don't block if it fails
+        this.powerbiService.getDatasetById(datasetId).subscribe({
+          next: (ds) => {
+            this.datasetInfo = ds;
+            this.loading = false;
+            this.step = 3;
+          },
+          error: (err) => {
+            console.error('Dataset info fetch failed', err);
+            this.loading = false;
+            this.step = 3; // Still proceed to step 3
+          }
+        });
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Schema Fetch Failed', detail: 'Could not retrieve columns for this table.' });
+        this.loading = false;
+      }
     });
   }
 
@@ -116,19 +191,28 @@ export class AutomationSetupComponent implements OnInit {
       return;
     }
 
-    // Duplicate check
-    const alreadyScheduled = this.existingTasks.some(t => t.reportId === this.selectedReport?.id);
+    // Duplicate check (Report + Table)
+    const alreadyScheduled = this.existingTasks.some(t => 
+      t.reportId === this.selectedReport?.id && 
+      t.pbiTableName === this.selectedTable
+    );
+    
     if (alreadyScheduled) {
-      this.messageService.add({ severity: 'error', summary: 'Duplicate Schedule', detail: `The report "${this.selectedReport.name}" is already scheduled.` });
+      this.messageService.add({ 
+        severity: 'error', 
+        summary: 'Duplicate Schedule', 
+        detail: `The table "${this.selectedTable}" in report "${this.selectedReport.name}" is already scheduled.` 
+      });
       return;
     }
 
     const task = {
-      reportName: this.selectedReport.name,
       reportId: this.selectedReport.id,
+      reportName: this.selectedReport.name,
       datasetId: this.selectedReport.datasetId,
-      workspaceId: 'cda4f662-6824-4e18-9cc3-ac5c56dcb8db', // Using mock workspace
-      cronExpression: this.cronTime,
+      tableName: this.isCustomDax ? `Custom_Query_${Date.now()}` : this.selectedTable,
+      pbiTableName: this.isCustomDax ? `EVALUATE ${this.customDaxQuery}` : this.selectedTable,
+      cronTime: this.cronTime,
       primaryKeys: this.selectedPKs
     };
 

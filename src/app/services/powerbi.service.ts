@@ -32,16 +32,22 @@ export class PowerbiService {
 
   constructor(private http: HttpClient) {}
 
-  getReports(): Observable<PowerBIReport[]> {
-    return this.http.get<PowerBIReport[]>(`${this.apiUrl}/reports`);
+  getReports(page: number = 1, limit: number = 10, search: string = ''): Observable<any> {
+    const params = { page: page.toString(), limit: limit.toString(), search };
+    return this.http.get<any>(`${this.apiUrl}/reports`, { params });
   }
 
   getDatasetById(datasetId: string): Observable<PowerBIDataset> {
     return this.http.get<PowerBIDataset>(`${this.apiUrl}/datasets/${datasetId}`);
   }
 
-  getDatasetSchema(datasetId: string): Observable<PowerBISchemaColumn[]> {
-    return this.http.get<PowerBISchemaColumn[]>(`${this.apiUrl}/datasets/${datasetId}/schema`);
+  getDatasetTables(datasetId: string): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/datasets/${datasetId}/tables`);
+  }
+
+  getDatasetSchema(datasetId: string, tableName?: string): Observable<PowerBISchemaColumn[]> {
+    const url = `${this.apiUrl}/datasets/${datasetId}/schema${tableName ? '?tableName=' + encodeURIComponent(tableName) : ''}`;
+    return this.http.get<PowerBISchemaColumn[]>(url);
   }
 
   searchCache(query: string): Observable<any[]> {

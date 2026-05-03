@@ -28,14 +28,69 @@
         <span class="label">Dataset ID</span>
         <span class="value">{{selectedReport.datasetId}}</span>
       </div>
-      <button class="btn-next" [disabled]="loading" (click)="fetchSchema(selectedReport.datasetId)">
+      <button class="btn-next" [disabled]="loading" (click)="fetchTables(selectedReport.datasetId)">
         {{loading ? 'Analyzing...' : 'Continue to Config'}}
       </button>
     </div>
   </div>
 
-  <!-- Step 2: Configuration -->
+  <!-- Step 2: Table Selection -->
   <div *ngIf="step === 2" class="step-card">
+    <div class="field-group">
+      <label>Select Table to Automate</label>
+      <div class="mode-toggle">
+        <button [class.active]="!isCustomDax" (click)="isCustomDax = false">Discover Tables</button>
+        <button [class.active]="isCustomDax" (click)="isCustomDax = true">Custom DAX Query</button>
+      </div>
+
+      <div *ngIf="!isCustomDax">
+        <div class="manual-input" style="margin-bottom: 20px;">
+          <input type="text" 
+                 class="form-control" 
+                 placeholder="Search tables or enter name manually..." 
+                 [(ngModel)]="tableSearchTerm"
+                 (input)="onTableSearch(tableSearchTerm)">
+        </div>
+
+        <div class="table-list" *ngIf="filteredTables.length > 0">
+          <div *ngFor="let table of filteredTables" 
+               class="table-item" 
+               [class.selected]="selectedTable === table"
+               (click)="selectedTable = table">
+            <i class="pi pi-table"></i>
+            <span>{{table}}</span>
+          </div>
+        </div>
+
+        <div class="info-banner warn" *ngIf="tables.length === 0">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>Automatic table discovery is limited for this dataset. Please type the exact table name above.</span>
+        </div>
+      </div>
+
+      <div *ngIf="isCustomDax" class="dax-container">
+        <p class="small">Enter a DAX query to create a custom joined table (e.g., SUMMARIZECOLUMNS...)</p>
+        <textarea class="form-control dax-area" 
+                  rows="8" 
+                  [(ngModel)]="customDaxQuery" 
+                  placeholder="SUMMARIZECOLUMNS(...)"></textarea>
+        <div class="info-banner">
+          <i class="pi pi-info-circle"></i>
+          <span>Tip: You can get this query from Power BI Desktop using "Performance Analyzer" -> "Copy Query" on your visual.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-back" (click)="step = 1">Back</button>
+      <button class="btn-next" [disabled]="!selectedTable || loading" (click)="onSelectTable()">
+        {{loading ? 'Fetching Schema...' : 'Configure Columns'}}
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 3: Configuration -->
+  <div *ngIf="step === 3" class="step-card">
     <div class="info-banner" *ngIf="datasetInfo">
       <i class="icon-clock"></i>
       Power BI Last Refresh: <strong>{{datasetInfo.lastRefreshTime | date:'medium'}}</strong>
@@ -45,6 +100,7 @@
     <div class="config-grid">
       <div class="config-section">
         <h3>Schedule Setting</h3>
+        <p class="small">Table: <strong>{{selectedTable}}</strong></p>
         <p class="small">Enter Cron Expression (Default is daily at midnight)</p>
         <div class="cron-input">
           <input type="text" [(ngModel)]="cronTime" class="form-control" placeholder="0 0 * * *">
@@ -78,7 +134,7 @@
     </div>
 
     <div class="actions">
-      <button class="btn-back" (click)="step = 1">Back</button>
+      <button class="btn-back" (click)="step = 2">Back</button>
       <button class="btn-save" (click)="saveSchedule()" [disabled]="loading || selectedPKs.length === 0">
         {{loading ? 'Saving...' : 'Finalize Automation'}}
       </button>

@@ -68,25 +68,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (data) => {
         // Real data from API
         this.tasks = [...data];
-        
-        // Add 7 Professional Mock Reports for UI Testing
-        const mockReports: AutomationTask[] = [
-          { id: 101, reportName: 'Inventory Summary', status: 'Success', cronExpression: '0 2 * * *', lastRunTime: new Date().toISOString(), lastRunRecordCount: 1240, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 102, reportName: 'Finance Overview', status: 'Running', cronExpression: '0 6 * * 1-5', lastRunTime: new Date().toISOString(), lastRunRecordCount: 450, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 103, reportName: 'Customer Insights', status: 'Pending', cronExpression: '0 8 * * *', lastRunRecordCount: 0, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 104, reportName: 'Supply Chain Performance', status: 'Success', cronExpression: '0 10 * * *', lastRunTime: new Date().toISOString(), lastRunRecordCount: 8900, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 105, reportName: 'HR Analytics Report', status: 'Failed', cronExpression: '0 9 * * 1', lastRunTime: new Date().toISOString(), lastRunRecordCount: 0, lastErrorMessage: 'API Timeout', reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 106, reportName: 'IT Infrastructure Dashboard', status: 'Success', cronExpression: '0 */12 * * *', lastRunTime: new Date().toISOString(), lastRunRecordCount: 15600, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] },
-          { id: 107, reportName: 'Project Portfolio Report', status: 'Pending', cronExpression: '0 16 * * 5', lastRunRecordCount: 0, reportId: '', workspaceId: '', datasetId: '', primaryKeys: [] }
-        ];
-
-        // Combine only if not already present (prevents duplicates during refresh)
-        mockReports.forEach(m => {
-          if (!this.tasks.find(t => t.reportName === m.reportName)) {
-            this.tasks.push(m);
-          }
-        });
-
         this.applyFiltersAndPagination();
         this.loading = false;
       },
@@ -146,18 +127,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onManualRun(id: number | undefined): void {
     if (id === undefined) return;
     
-    // Handle mock report run
-    if (id >= 100) {
-      this.messageService.add({ severity: 'success', summary: 'Mock Run Triggered', detail: 'The manual data sync for this mock report has started.' });
-      return;
-    }
+    // Safety limit for manual runs
+    const manualRunLimit = 1000;
 
-    this.automationApi.runTaskManually(id).subscribe({
+    this.automationApi.runTaskManually(id, manualRunLimit).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Run Triggered', detail: 'The manual data sync has started.' });
+        this.messageService.add({ severity: 'success', summary: 'Run Triggered', detail: `The manual data sync has started (Limited to ${manualRunLimit} rows).` });
         this.loadTasks(false);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Execution Failed', detail: 'Failed to trigger manual run.' })
+      error: () => this.messageService.add({ severity: 'error', summary: 'Execution Failed', detail: 'Failed to trigger manual run. Check backend logs.' })
     });
   }
 
