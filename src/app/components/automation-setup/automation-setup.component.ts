@@ -128,7 +128,7 @@ export class AutomationSetupComponent implements OnInit {
     this.loading = true;
     // We'll use the execute-query endpoint to get the schema of the custom DAX
     this.powerbiService.executeQuery(datasetId, `EVALUATE TOPN(1, ${dax})`).subscribe({
-      next: (result) => {
+      next: (result: any) => {
         if (result.results?.[0]?.tables?.[0]?.rows?.length > 0) {
           const firstRow = result.results[0].tables[0].rows[0];
           this.columns = Object.keys(firstRow).map(key => ({
@@ -142,7 +142,7 @@ export class AutomationSetupComponent implements OnInit {
         }
         this.loading = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('DAX Schema error:', err);
         alert('Failed to validate DAX query. ' + (err.error?.message || err.message));
         this.loading = false;
@@ -210,9 +210,10 @@ export class AutomationSetupComponent implements OnInit {
       reportId: this.selectedReport.id,
       reportName: this.selectedReport.name,
       datasetId: this.selectedReport.datasetId,
+      workspaceId: this.selectedReport.datasetWorkspaceId || 'cda4f662-6824-4e18-9cc3-ac5c56dcb8db', // Fallback to a default if missing
       tableName: this.isCustomDax ? `Custom_Query_${Date.now()}` : this.selectedTable,
       pbiTableName: this.isCustomDax ? `EVALUATE ${this.customDaxQuery}` : this.selectedTable,
-      cronTime: this.cronTime,
+      cronExpression: this.cronTime,
       primaryKeys: this.selectedPKs
     };
 

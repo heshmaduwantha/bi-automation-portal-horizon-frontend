@@ -8,6 +8,7 @@ export interface PowerBIReport {
   reportType: string;
   format: string;
   datasetId: string;
+  datasetWorkspaceId: string;
   webUrl: string;
   embedUrl: string;
 }
@@ -57,5 +58,9 @@ export class PowerbiService {
   triggerRefresh(datasetId: string, groupId?: string): Observable<any> {
     const url = `${this.apiUrl}/datasets/${datasetId}/refresh${groupId ? '?groupId=' + groupId : ''}`;
     return this.http.post(url, {});
+  }
+
+  executeQuery(datasetId: string, dax: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/datasets/${datasetId}/execute-query`, { query: dax });
   }
 }
